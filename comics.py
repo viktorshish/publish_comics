@@ -19,7 +19,8 @@ def download_comics(url, filename):
 
 
 def get_download_url(params):
-    response = requests.get('https://api.vk.com/method/photos.getWallUploadServer', params=params)
+    url = 'https://api.vk.com/method/photos.getWallUploadServer'
+    response = requests.get(url, params=params)
     response.raise_for_status()
     return response.json()['response']['upload_url']
 
@@ -30,6 +31,20 @@ def upload_image(url):
         response = requests.post(url, files=files)
         response.raise_for_status()
         return response.json()
+
+
+def save_comics_in_server(access_token, group_id, image):
+    url = 'https://api.vk.com/method/photos.saveWallPhoto'
+    params = {
+        'access_token': access_token,
+        'group_id': group_id,
+        'photo': image['photo'],
+        'server': image['server'],
+        'hash': image['hash'],
+        'v': '5.199',
+    }
+    response = requests.post(url, params=params)
+    return response.json()
 
 
 def main():
@@ -53,7 +68,13 @@ def main():
         'group_id': group_id
     }
     download_url = get_download_url(params)
-    print(f'{upload_image(download_url)}')
+    print(f'{upload_image(download_url)}\n')
+    image = upload_image(download_url)
+    print(save_comics_in_server(access_token, group_id, image))
+
+
+
+
 
 
 if __name__ == '__main__':
