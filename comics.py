@@ -18,7 +18,12 @@ def download_comics(url, filename):
         file.write(response.content)
 
 
-def get_download_url(params):
+def get_upload_vk_url(access_token, group_id):
+    params = {
+        'access_token': access_token,
+        'v': '5.199',
+        'group_id': group_id
+    }
     url = 'https://api.vk.com/method/photos.getWallUploadServer'
     response = requests.get(url, params=params)
     response.raise_for_status()
@@ -33,17 +38,39 @@ def upload_image(url):
         return response.json()
 
 
-def save_comics_in_server(access_token, group_id, image):
-    url = 'https://api.vk.com/method/photos.saveWallPhoto'
+def save_image_in_albom(access_token, group_id, uploaded_image):
     params = {
         'access_token': access_token,
         'group_id': group_id,
-        'photo': image['photo'],
-        'server': image['server'],
-        'hash': image['hash'],
+        'photo': uploaded_image['photo'],
+        'server': uploaded_image['server'],
+        'hash': uploaded_image['hash'],
         'v': '5.199',
     }
+    url = 'https://api.vk.com/method/photos.saveWallPhoto'
     response = requests.post(url, params=params)
+    return response.json()
+
+
+def publicate_image(access_token, group_id, saved_image, comics_alt):
+    image_owner_id = saved_image['owner_id']
+    image_media_id = saved_image['id']
+    image_url = saved_image['sizes'][-1]['url']
+    image_url_netloc = urlparse(image_url).netloc
+    image_url_path = urlparse(image_url).path
+    image_url_params = urlparse(image_url).params
+    without_protokol_url = image_url_netloc + image_url_path + image_url_params
+    attachments = f'photo{image_owner_id}_{image_media_id}HTTPS{without_protokol_url}'
+    params = {
+        'access_token': access_token,
+        'owner_id': f'-{group_id}',
+        'message': comics_alt,
+        'attachments': attachments,
+        'v': '5.199'
+    }
+    url = 'https://api.vk.com/method/wall.post'
+    response = requests.post(url, params=params)
+    response.raise_for_status()
     return response.json()
 
 
@@ -54,7 +81,7 @@ def main():
     access_token = env.str('APP_ACCESS_TOKEN')
     group_id = env.str('VK_GROUP_ID')
 
-    comics_id = 353
+    comics_id = 200
     url = f'https://xkcd.com/{comics_id}/info.0.json'
     comics = get_comics_page(url)
     comics_alt = comics['alt']
@@ -62,19 +89,15 @@ def main():
     file_name = urlparse(img_url).path.split('/')[-1]
     download_comics(img_url, file_name)
 
-    params = {
-        'access_token': access_token,
-        'v': '5.199',
-        'group_id': group_id
-    }
-    download_url = get_download_url(params)
-    print(f'{upload_image(download_url)}\n')
-    image = upload_image(download_url)
-    print(save_comics_in_server(access_token, group_id, image))
-
-
-
-
+    upload_url = get_upload_vk_url(access_token, group_id)
+    uploaded_image = upload_image(upload_url)
+    saved_image = save_image_in_albom(access_token, group_id, uploaded_image)
+    publicate_image(
+        access_token,
+        group_id,
+        saved_image['response'][-1],
+        comics_alt
+    )
 
 
 if __name__ == '__main__':
