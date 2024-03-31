@@ -1,7 +1,14 @@
+from random import randint
 from urllib.parse import urlparse
 
 from environs import Env
 import requests
+
+
+def get_latest_comics_number():
+    url = f'https://xkcd.com/info.0.json'
+    response = requests.get(url)
+    return response.json()
 
 
 def get_comics_page(url):
@@ -10,11 +17,11 @@ def get_comics_page(url):
     return response.json()
 
 
-def download_comics(url, filename):
+def download_comics(url):
     response = requests.get(url)
     response.raise_for_status()
 
-    with open(filename, 'wb') as file:
+    with open('comics.png', 'wb') as file:
         file.write(response.content)
 
 
@@ -31,7 +38,7 @@ def get_upload_vk_url(access_token, group_id):
 
 
 def upload_image(url):
-    with open('python.png', 'rb') as file:
+    with open('comics.png', 'rb') as file:
         files = {'photo': file}
         response = requests.post(url, files=files)
         response.raise_for_status()
@@ -81,13 +88,12 @@ def main():
     access_token = env.str('APP_ACCESS_TOKEN')
     group_id = env.str('VK_GROUP_ID')
 
-    comics_id = 200
-    url = f'https://xkcd.com/{comics_id}/info.0.json'
-    comics = get_comics_page(url)
+    comics_id = randint(1, get_latest_comics_number()['num'])
+    comics_url = f'https://xkcd.com/{comics_id}/info.0.json'
+    comics = get_comics_page(comics_url)
     comics_alt = comics['alt']
     img_url = comics['img']
-    file_name = urlparse(img_url).path.split('/')[-1]
-    download_comics(img_url, file_name)
+    download_comics(img_url)
 
     upload_url = get_upload_vk_url(access_token, group_id)
     uploaded_image = upload_image(upload_url)
