@@ -1,4 +1,5 @@
 from random import randint
+import os
 from urllib.parse import urlparse
 
 from environs import Env
@@ -97,13 +98,10 @@ def main():
 
     upload_url = get_upload_vk_url(access_token, group_id)
     uploaded_image = upload_image(upload_url)
-    saved_image = save_image_in_albom(access_token, group_id, uploaded_image)
-    publicate_image(
-        access_token,
-        group_id,
-        saved_image['response'][-1],
-        comics_alt
-    )
+    saved_image = save_image_in_albom(access_token, group_id, uploaded_image)['response'][-1]
+    publicate_image(access_token, group_id, saved_image, comics_alt)
+
+    os.remove('comics.png')
 
 
 if __name__ == '__main__':
