@@ -64,12 +64,10 @@ def save_image_in_albom(access_token, group_id, photo, server_url, photo_hash):
     return response.json()
 
 
-def publicate_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt):
-    image_url_netloc = urlparse(image_url).netloc
-    image_url_path = urlparse(image_url).path
-    image_url_params = urlparse(image_url).params
-    without_protokol_url = image_url_netloc + image_url_path + image_url_params
-    attachments = f'photo{image_owner_id}_{image_media_id}HTTPS{without_protokol_url}'
+def publish_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt):
+    parsed_url = urlparse(image_url)
+    without_protocol_url = f'{parsed_url.netloc}{parsed_url.path}{parsed_url.params}'
+    attachments = f'photo{image_owner_id}_{image_media_id}HTTPS{without_protocol_url}'
     params = {
         'access_token': access_token,
         'owner_id': f'-{group_id}',
@@ -119,7 +117,7 @@ def main():
         image_owner_id = saved_image['owner_id']
         image_media_id = saved_image['id']
         image_url = saved_image['sizes'][-1]['url']
-        publicate_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt)
+        publish_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt)
     except requests.exceptions.HTTPError as error:
         print(f'HTTP error: {error}')
     except requests.exceptions.ConnectionError:
