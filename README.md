@@ -81,4 +81,3 @@ pip install -r requirements.txt
 ```bash
 python comics.py
 ```
-

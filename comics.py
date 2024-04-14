@@ -9,6 +9,7 @@ import requests
 def get_latest_comics_number():
     url = f'https://xkcd.com/info.0.json'
     response = requests.get(url)
+    response.raise_for_status()
     return response.json()
 
 
@@ -35,7 +36,8 @@ def get_upload_vk_url(access_token, group_id):
     url = 'https://api.vk.com/method/photos.getWallUploadServer'
     response = requests.get(url, params=params)
     response.raise_for_status()
-    return response.json()['response']['upload_url']
+    check_response(response)
+    return response.json()
 
 
 def upload_image(url):
@@ -57,6 +59,8 @@ def save_image_in_albom(access_token, group_id, photo, server_url, photo_hash):
     }
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
     response = requests.post(url, params=params)
+    response.raise_for_status()
+    check_response(response)
     return response.json()
 
 
@@ -76,7 +80,16 @@ def publicate_image(access_token, group_id, image_owner_id, image_media_id, imag
     url = 'https://api.vk.com/method/wall.post'
     response = requests.post(url, params=params)
     response.raise_for_status()
+    check_response(response)
     return response.json()
+
+
+def check_response(response):
+    decoded_response = response.json()
+    if 'error' in decoded_response:
+        error_code = decoded_response['error']['error_code']
+        error_message = decoded_response['error']['error_msg']
+        raise requests.exceptions.HTTPError(f'VK API Error {error_code}: {error_message}')
 
 
 def main():
@@ -86,25 +99,33 @@ def main():
     access_token = env.str('APP_ACCESS_TOKEN')
     group_id = env.str('VK_GROUP_ID')
 
-    comics_id = randint(1, get_latest_comics_number()['num'])
-    comics_url = f'https://xkcd.com/{comics_id}/info.0.json'
-    comics = get_comics_page(comics_url)
-    comics_alt = comics['alt']
-    img_url = comics['img']
-    download_comics(img_url)
+    try:
+        comics_id = randint(1, get_latest_comics_number()['num'])
+        comics_url = f'https://xkcd.com/{comics_id}/info.0.json'
 
-    upload_url = get_upload_vk_url(access_token, group_id)
-    uploaded_image = upload_image(upload_url)
+        comics = get_comics_page(comics_url)
+        comics_alt = comics['alt']
+        img_url = comics['img']
+        download_comics(img_url)
 
-    photo = uploaded_image['photo']
-    server_url = uploaded_image['server']
-    photo_hash = uploaded_image['hash']
-    saved_image = save_image_in_albom(access_token, group_id, photo, server_url, photo_hash)['response'][-1]
+        upload_url = get_upload_vk_url(access_token, group_id)['response']['upload_url']
+        uploaded_image = upload_image(upload_url)
 
-    image_owner_id = saved_image['owner_id']
-    image_media_id = saved_image['id']
-    image_url = saved_image['sizes'][-1]['url']
-    publicate_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt)
+        photo = uploaded_image['photo']
+        server_url = uploaded_image['server']
+        photo_hash = uploaded_image['hash']
+        saved_image = save_image_in_albom(access_token, group_id, photo, server_url, photo_hash)['response'][-1]
+
+        image_owner_id = saved_image['owner_id']
+        image_media_id = saved_image['id']
+        image_url = saved_image['sizes'][-1]['url']
+        publicate_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt)
+    except requests.exceptions.HTTPError as error:
+        print(f'HTTP error: {error}')
+    except requests.exceptions.ConnectionError:
+        print('Проблеммы с соединением')
+    except FileNotFoundError:
+        print('Отсутствует комикс для публикации')
 
     os.remove('comics.png')
 
