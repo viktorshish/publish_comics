@@ -118,14 +118,18 @@ def main():
         image_media_id = saved_image['id']
         image_url = saved_image['sizes'][-1]['url']
         publish_image(access_token, group_id, image_owner_id, image_media_id, image_url, comics_alt)
+
     except requests.exceptions.HTTPError as error:
         print(f'HTTP error: {error}')
+
     except requests.exceptions.ConnectionError:
         print('Проблеммы с соединением')
+
     except FileNotFoundError:
         print('Отсутствует комикс для публикации')
 
-    os.remove('comics.png')
+    finally:
+        os.remove('comics.png')
 
 
 if __name__ == '__main__':
