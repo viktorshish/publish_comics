@@ -43,7 +43,7 @@ def get_upload_vk_url(access_token, group_id):
 def upload_image(url):
     with open('comics.png', 'rb') as file:
         files = {'photo': file}
-    response = requests.post(url, files=files)
+        response = requests.post(url, files=files)
     response.raise_for_status()
     return response.json()
 
